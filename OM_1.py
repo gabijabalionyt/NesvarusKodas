@@ -1,139 +1,96 @@
-# Visualizacijai matlab
+def draw_table(xvals, v):
+
+    from matplotlib.pyplot import figure
+    figure(num=None, figsize=(16, 2), dpi=300, facecolor='w', edgecolor='k')
+    columns = ('X0', 'B', 'r', 'k', 'fn. sk.')
+
+    ax = plt.subplot2grid((2,1), (0,0), colspan=2, rowspan=2)
+    ax.table(cellText=xvals,
+        colLabels=columns, loc="upper center")
+    ax.title.set_text('Rezultatų lentelė {}'.format(v))
+    ax.axis("off")
+    plt.show()
+
+import numpy as np
+import math
 import matplotlib.pyplot as plt
 
-# kintamasis naudojamas funkcijose skaiciuojant iskvietimus
-i = 0
+# Funkciju skaiciavimo pagalbine funkcija
+def f_sk():
+    f_sk.counter += 1
+# Turio pakelto kvadratu funkcija
+def f(val):
+    f_sk()
+    a, b, c = val
+    return -a * b * c
+def g(val):
+    f_sk()
+    a, b, c = val
+    return (2 * a * b + 2 * b * c + 2 * c * a - 1)
+def hx(val):
+    f_sk()
+    x, y, z = val
+    return -x
+def hy(val):
+    f_sk()
+    x, y, z = val
+    return -y
+def hz(val):
+    f_sk()
+    x, y, z = val
+    return -z
+def grad_norm(val, r):
+    return math.sqrt(diffx(val, r)**2 + diffy(val, r)**2 + diffz(val, r)**2)
+def diffx(val, r):
+    f_sk()
+    x, y, z = val
+    return -y*z + (2*(2*y+2*z)*(2*y*x+2*x*z+2*y*z-1))/r + min(2*x/r, 0)
+def diffy(val, r):
+    f_sk()
+    x, y, z = val
+    return -x*z + (2*(2*x+2*z)*(2*y*x+2*x*z+2*y*z-1))/r + min(2*y/r, 0)
+def diffz(val, r):
+    f_sk()
+    x, y, z = val
+    return -x*y + (2*(2*x+2*y)*(2*y*x+2*x*z+2*y*z-1))/r + min(2*z/r, 0)
+def B(val, r):
+    f_sk()
+    x, y, z = val
+    return f(val) + 1/r * ((max(hx(val), 0)**2 + max(hy(val), 0)**2 +max(hz(val), 0)**2 + g(val)**2))
+def b(val, r):
+    f_sk()
+    return (max(hx(val), 0)**2+ max(hy(val), 0)**2 + max(hz(val), 0)**2 +g(val)**2)
+def gradient_desc(val, r, gamma=1e-3, epsilon=1e-4):
+    i = 0
+    x, y, z = val
+    while abs(grad_norm((x, y, z), r)) >= epsilon:
+        x_ = x
+        y_ = y
+        z_ = z
+        x -= diffx((x_, y_, z_), r) * gamma
+        y -= diffy((x_, y_, z_), r) * gamma
+        z -= diffz((x_, y_, z_), r) * gamma
+    return {'x': x, 'y': y, 'z': z, 'B': B((x, y, z), r), 'r': r, 'f_sk': f_sk}
+# Funkcija, kuri apibrezia pagrindini skaiciavima
+def calculate(X, v, r=1, k=6):
+    xvals = []
+    X0 = X
+    for i in range(0, k):
+        f_sk.counter = 0
+        answ = gradient_desc(X0, r)
+        r = r / 2
+        X0 = (round(answ['x'], 5), round(answ['y'], 5), round(answ['z'], 5))
+        xvals.append([X0, round(answ['B'], 4), answ['r'], i+1, f_sk.counter])
+    draw_table(xvals, v)
+    
+# Aprasyti pradiniai taskai
+X0 = (0, 0, 0)
+X0_ = (1e-5, 1e-5, 1e-5)
+X1 = (1, 1, 1)
+Xm = (0.5, 0, 0.9) # LSP A, B ir C reiksmes
 
-# mano funkcija
-def f(x):
-   global i
-   i += 1
-   return 7*x*x-8*x+6
-
-#  pirmos eiles funkcijos isvestine
-def df1(x):
-   return 14*x-8
-
-#  antros eiles funkcijos isvestine
-def df2(x):
-   return 14
-
-# aprasomos asys kurias naudosiu vizuolizacijai
-def graphAxes():
-   axes = plt.gca()
-   axes.set_xlim([0,5])
-   axes.set_ylim([-3,30])
-
-# vizuolizacijos funkcija
-def visualization():
-   x = []
-   y = []
-   for i in range(0, 101):
-       x.append(i/10)
-       y.append(f(i/10))
-   graphAxes()
-   plt.plot(x, y, 'k-')
-
-
-#  Intervalo dalijimo pusiau metodas arba IDPM
-def IDPM(interval):
-   global i
-   visualization()
-   i = 0
-   j = 0
-# Algoritmas pagal skaidres
-   l, r = interval 
-   xm = (l + r)/2
-   L = r - l
-   fxm = f(xm)
-   plt.plot(xm, fxm, 'md') #Kreipiames i Matlab
-   while L >= 0.0001:
-       x1 = l + L/4
-       x2 = r - L/4
-       f1 = f(x1)
-       f2 = f(x2)
-       plt.plot(x1, f1, 'md') #Kreipiames i Matlab
-       plt.plot(x2, f2, 'md') #Kreipiames i Matlab
-       if(f1 < fxm):
-           r = xm
-           xm = x1
-           fxm = f1
-       elif(f2 < fxm):
-           l = xm
-           xm = x2
-           fxm = f2
-       else:
-           l = x1
-           r = x2
-
-       L = r - l
-       #j kintamasis kuris skaičiuoja kiek žingsnių buvo atlikta, naudojamas kai viskas yra false
-       j = j + 1
-   plt.show()
-   return "%.10f" % xm, i, j
-
-# 
-# Auksinio pjūvio metodas arba APM
-def APM(interval):
-   global i
-   visualization()
-   i = 0
-   j = 0
-   #Algoritmas is skaidriu
-   l, r = interval
-   L = r - l
-   phi = 0.61803 #Fibonacio skaicius (is skaidriu)
-   x1 = r - phi * L
-   x2 = l + phi * L
-   f1 = f(x1)
-   f2 = f(x2)
-   while L >= 0.0001:
-       plt.plot(x1, f1, 'md')
-       plt.plot(x2, f2, 'md')
-       if(f2 < f1):
-           l = x1
-           L = r - l
-           x1 = x2
-           f1 = f2
-           x2 = l + phi * L
-           f2 = f(x2)
-       else:
-           r = x2
-           L = r - l
-           x2 = x1
-           f2 = f1
-           x1 = r - phi * L
-           f1 = f(x1)
-           #Skaiciuojame zingsnius
-       j = j + 1
-   plt.show()
-   return "%.10f" % x1, i, j
-
-# Niutono metodas arba NM
-def NM(x0):
-   global i
-   visualization()
-   i = 0
-   j = 0
-   comp = 0.0001                    # comp skirtas zingsnio dydzio matavimui
-   x = x0
-   fx = f(x)
-   while(abs(df1(x)) > comp):
-     df1x = df1(x)
-     df2x = df2(x)
-     x = x - (df1x/df2x)
-     fx = f(x)
-     plt.plot(x, fx, 'md')
-     j = j + 1
-   plt.show()
-   return "%.10f" % x, i, j
-
-minimum, funCalls, steps = IDPM([0, 10])
-print('Intervalo dalijimo pusiau metodas: \nx: ', minimum,
-', funkcijos iškvietimų skaičius: ', funCalls, ', padaryta žingsnių: ', steps)
-minimum, funCalls, steps = APM([0, 10])
-print('Auksinio pjuvio metodas: \nx: ', minimum,  
-', funkcijos iškvietimų skaičius: ', funCalls, ', padaryta žingsnių: ', steps)
-minimum, funCalls, steps = NM(5)
-print('Niutono metodas: \nx: ', minimum,  
-', funkcijos iškvietimų skaičius: ', funCalls, ', padaryta žingsnių: ', steps)
+# Skaiciuojamos vertes naudojant skirtingus X taskus
+calculate(X0, 'X0')
+calculate(X0_, 'X0 (beveik nulinės reikšmės)')
+calculate(X1, 'X1')
+calculate(Xm, 'Xm')
